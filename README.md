@@ -28,7 +28,7 @@ data:
 ```yaml
       initContainers:
         - name: install-hacs-plugins
-          image: "ghcr.io/minvs/hacs-plugins:latest"
+          image: "ghcr.io/minvs1/hacs-plugins:latest"
           volumeMounts:
             - name: config
               mountPath: /config
@@ -77,7 +77,7 @@ spec:
     spec:
       initContainers:
         - name: install-hacs-plugins
-          image: "ghcr.io/minvs/hacs-plugins:latest"
+          image: "ghcr.io/minvs1/hacs-plugins:latest"
           volumeMounts:
             - name: config
               mountPath: /config
