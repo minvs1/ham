@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM alpine:3.14
+FROM --platform=$TARGETOS/$TARGETARCH alpine:3.14
 
 RUN apk add --no-cache wget bash jq
 
