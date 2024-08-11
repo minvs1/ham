@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM alpine:3.14
+FROM --platform=$BUILDPLATFORM debian:bookworm-slim
 
 RUN apk add --no-cache wget bash jq
 
