@@ -1,10 +1,35 @@
 #!/bin/bash
 set -e
 
+# Function to calculate SHA256 of a file
+calculate_sha() {
+  sha256sum "$1" | awk '{ print $1 }'
+}
+
+# Generate lovelace_resources.yaml
+generate_lovelace_resources() {
+  echo "mode: yaml" > /config/lovelace_resources.yaml
+  echo "resources:" >> /config/lovelace_resources.yaml
+
+  echo "$COMPONENTS" | jq -c 'to_entries[]' | while read component; do
+    NAME=$(echo $component | jq -r '.key')
+    if [ -f "/config/www/${NAME}.js" ]; then
+      SHA=$(calculate_sha "/config/www/${NAME}.js")
+      echo "  - url: /local/${NAME}.js?v=${SHA}" >> /config/lovelace_resources.yaml
+      echo "    type: module" >> /config/lovelace_resources.yaml
+    else
+      echo "Warning: ${NAME}.js not found, skipping in Lovelace resources"
+    fi
+  done
+}
+
 # Define the version comparison function
 version_gt() { 
     test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"
 }
+
+# Set HACS_VERSION if not already set
+HACS_VERSION=${HACS_VERSION:-"1.32.1"} 
 
 # Install HACS
 HACS_INSTALLED_VERSION=$(cat /config/custom_components/hacs/.version 2>/dev/null || echo "0")
@@ -66,3 +91,7 @@ for file in /config/www/*.js; do
     jq "del([\"$filename\"])" "$LOCK_FILE" > "$LOCK_FILE.tmp" && mv "$LOCK_FILE.tmp" "$LOCK_FILE"
   fi
 done
+
+generate_lovelace_resources
+
+echo "Lovelace resources configuration generated based on components.json."

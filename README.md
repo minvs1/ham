@@ -2,7 +2,11 @@
 
 HACS Plugins is a simple container that can be used as an init container to automatically download, install and update HACS plugins.
 
-## ConfigMap
+## Getting Started
+
+### Create a components.json file
+
+For example using a ConfigMap:
 
 ```yaml
 apiVersion: v1
@@ -23,7 +27,15 @@ data:
     }
 ```
 
-## Init Container
+### Update your Home Assistant configuration
+
+Add the following to your Home Assistant configuration:
+
+```yaml
+lovelace: !include lovelace_resources.yaml
+```
+
+### Add Init Container
 
 ```yaml
       initContainers:
@@ -37,29 +49,6 @@ data:
               subPath: components.json
 ```
 
-## Homeassistant Configuration
-
-```yaml
-lovelace:
-  mode: yaml
-  resources:
-    - url: /local/vacuum-card.js?v=2.10.1
-      type: module
-    - url: /local/mini-graph-card-bundle.js?v=0.12.1
-      type: module
-    - url: /local/card-mod.js?v=3.4.3
-      type: module
-    - url: /local/bar-card.js?v=3.2.0
-      type: module
-    - url: /local/banner-card.js?v=0.13.0
-      type: module
-    - url: /local/bubble-card.js?v=2.1.1
-      type: module
-    - url: /local/purifier-card.js?v=2.6.2
-      type: module
-    - url: /local/dwains-dashboard.js?v=3.0
-      type: module
-```
 ## Example Deployment
 
 ```yaml
