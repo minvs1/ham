@@ -7,6 +7,11 @@ export COMPONENTS_FILE=${COMPONENTS_FILE:-"${CONFIG_DIR}/www/components.json"}
 export LOCK_FILE=${LOCK_FILE:-"${CONFIG_DIR}/www/components.json.lock"}
 export HACS_VERSION=${HACS_VERSION:-"1.32.1"}
 
+# Define the version comparison function
+version_gt() { 
+    test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"
+}
+
 # Function to calculate SHA256 of a file
 calculate_sha() {
   sha256sum "$1" | awk '{ print $1 }'
