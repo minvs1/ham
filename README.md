@@ -87,3 +87,10 @@ spec:
           configMap:
             name: custom-components-config
 ```
+
+## Tests
+
+``` bash
+docker build -f Dockerfile.test -t hacs-plugins-tests .
+docker run --rm hacs-plugins-tests
+```
