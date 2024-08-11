@@ -7,6 +7,14 @@ export COMPONENTS_FILE=${COMPONENTS_FILE:-"${CONFIG_DIR}/www/components.json"}
 export LOCK_FILE=${LOCK_FILE:-"${CONFIG_DIR}/www/components.json.lock"}
 export HACS_VERSION=${HACS_VERSION:-"1.32.1"}
 
+# Ensure necessary directories exist
+mkdir -p "${CONFIG_DIR}/www"
+
+# Create lock file if it doesn't exist
+if [ ! -f "${LOCK_FILE}" ]; then
+  echo "{}" > "${LOCK_FILE}"
+fi
+
 # Define the version comparison function
 version_gt() { 
     test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"
@@ -74,6 +82,8 @@ install_hacs() {
 
 # Main execution
 main() {
+  echo "Starting HACS plugins management..."
+
   # Only run HACS installation if not in test mode
   if [ "${TEST_MODE}" != "true" ]; then
     install_hacs
