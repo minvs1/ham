@@ -6,7 +6,7 @@ HACS Plugins is a simple container that can be used as an init container to auto
 
 ### Create a components.json file
 
-For example using a ConfigMap:
+Your components.json file defines which plugins to install and how they should be loaded. Here's an example using a ConfigMap:
 
 ```yaml
 apiVersion: v1
@@ -16,16 +16,42 @@ metadata:
 data:
   components.json: |
     {
-      "vacuum-card": "https://github.com/denysdovhan/vacuum-card/releases/download/v2.10.1/vacuum-card.js",
-      "purifier-card": "https://github.com/denysdovhan/purifier-card/releases/download/v2.6.2/purifier-card.js",
-      "mini-graph-card-bundle": "https://github.com/kalkih/mini-graph-card/releases/download/v0.12.1/mini-graph-card-bundle.js",
-      "card-mod": "https://raw.githubusercontent.com/thomasloven/lovelace-card-mod/v3.4.3/card-mod.js",
-      "bar-card": "https://github.com/custom-cards/bar-card/releases/download/3.2.0/bar-card.js",
-      "banner-card": "https://github.com/nervetattoo/banner-card/releases/download/0.13.0/banner-card.js",
-      "bubble-card": "https://github.com/Clooos/Bubble-Card/blob/v2.1.1/dist/bubble-card.js",
-      "dwains-dashboard": "https://raw.githubusercontent.com/dwainscheeren/dwains-lovelace-dashboard/3.0/custom_components/dwains_dashboard/js/dwains-dashboard.js"
+      "vacuum-card": {
+        "url": "https://github.com/denysdovhan/vacuum-card/releases/download/v2.10.1/vacuum-card.js",
+        "version": "2.10.1",
+        "lovelace_resource": "vacuum-card.js"
+      },
+      "browser_mod": {
+        "url": "https://github.com/thomasloven/hass-browser_mod/releases/download/2.3.0/browser_mod.js",
+        "version": "2.3.0",
+        "lovelace_resource": null
+      },
+      "apex-cards": {
+        "url": "https://github.com/RomRider/apexcharts-card/releases/download/v2.0.4/apexcharts-card.zip",
+        "version": "2.0.4",
+        "lovelace_resource": "apexcharts-card/card.js"
+      }
     }
 ```
+
+### Components Configuration
+
+Each component in components.json can have the following properties:
+
+- `url` (required): URL to download the component from
+- `version` (required): Version of the component for update tracking
+- `type` (optional): Type of the file ("js" or "zip"). If not specified, will be auto-detected from the URL
+- `lovelace_resource` (optional): Path to the JS file that should be added to lovelace_resources.yaml. Set to null for components that don't need to be added to Lovelace resources
+
+#### File Types and Handling
+
+- **JavaScript Files (.js)**
+  - Downloaded directly to `/config/www/[name].js`
+  - Set `lovelace_resource` to the desired JS filename
+
+- **ZIP Files (.zip)**
+  - Automatically extracted to `/config/www/[zip-name]/`
+  - Set `lovelace_resource` to point to the main JS file within the extracted directory
 
 ### Update your Home Assistant configuration
 
@@ -88,9 +114,15 @@ spec:
             name: custom-components-config
 ```
 
+## Version Management
+
+The container maintains a lock file (`components.json.lock`) to track installed versions. Components are only downloaded when:
+- They haven't been installed before
+- A new version is specified in components.json
+
 ## Tests
 
-``` bash
+```bash
 docker build -f Dockerfile.test -t hacs-plugins-tests .
 docker run --rm hacs-plugins-tests
 ```

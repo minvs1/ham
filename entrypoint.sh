@@ -16,7 +16,7 @@ if [ ! -f "${LOCK_FILE}" ]; then
 fi
 
 # Define the version comparison function
-version_gt() { 
+version_gt() {
     test "$(echo "$@" | tr " " "\n" | sort -V | head -n 1)" != "$1"
 }
 
@@ -25,19 +25,79 @@ calculate_sha() {
   sha256sum "$1" | awk '{ print $1 }'
 }
 
+# Function to get zip filename without extension
+get_zip_name() {
+  local zipfile=$1
+  basename "$zipfile" .zip
+}
+
+# Function to detect file type from URL
+detect_file_type() {
+  local URL=$1
+  if [[ "$URL" =~ \.zip$ ]]; then
+    echo "zip"
+  elif [[ "$URL" =~ \.js$ ]]; then
+    echo "js"
+  else
+    echo "Error: Unable to detect file type from URL: $URL" >&2
+    return 1
+  fi
+}
+
+# Function to handle file downloads and processing based on type
+handle_component_download() {
+  local NAME=$1
+  local URL=$2
+  local TYPE=$3
+  local TARGET_DIR="${CONFIG_DIR}/www"
+  local TEMP_DIR=$(mktemp -d)
+
+  case $TYPE in
+    "js")
+      wget -O "${TARGET_DIR}/${NAME}.js" "$URL" || return 1
+      ;;
+    "zip")
+      local ZIP_FILE="${TEMP_DIR}/${NAME}.zip"
+      wget -O "$ZIP_FILE" "$URL" || return 1
+
+      # Get directory name based on zip file name
+      local EXTRACT_DIR=$(get_zip_name "$ZIP_FILE")
+      local EXTRACT_PATH="${TARGET_DIR}/${EXTRACT_DIR}"
+
+      # Clean up existing directory if it exists
+      if [ -d "$EXTRACT_PATH" ]; then
+        rm -rf "$EXTRACT_PATH"
+      fi
+
+      # Create extraction directory and extract
+      mkdir -p "$EXTRACT_PATH"
+      unzip -o "$ZIP_FILE" -d "$EXTRACT_PATH"
+      ;;
+    *)
+      echo "Unsupported file type: $TYPE" >&2
+      return 1
+      ;;
+  esac
+
+  rm -rf "${TEMP_DIR}"
+  return 0
+}
+
 # Generate lovelace_resources.yaml
 generate_lovelace_resources() {
   echo "mode: yaml" > "${CONFIG_DIR}/lovelace_resources.yaml"
   echo "resources:" >> "${CONFIG_DIR}/lovelace_resources.yaml"
 
-  jq -c 'to_entries[]' "${COMPONENTS_FILE}" | while read -r component; do
-    NAME=$(echo "$component" | jq -r '.key')
-    if [ -f "${CONFIG_DIR}/www/${NAME}.js" ]; then
-      SHA=$(calculate_sha "${CONFIG_DIR}/www/${NAME}.js")
-      echo "  - url: /local/${NAME}.js?v=${SHA}" >> "${CONFIG_DIR}/lovelace_resources.yaml"
+  jq -c 'to_entries[] | select(.value.lovelace_resource != null)' "${COMPONENTS_FILE}" | while read -r component; do
+    local RESOURCE=$(echo "$component" | jq -r '.value.lovelace_resource')
+    local RESOURCE_PATH="${CONFIG_DIR}/www/${RESOURCE}"
+
+    if [ -f "$RESOURCE_PATH" ]; then
+      local SHA=$(calculate_sha "$RESOURCE_PATH")
+      echo "  - url: /local/${RESOURCE}?v=${SHA}" >> "${CONFIG_DIR}/lovelace_resources.yaml"
       echo "    type: module" >> "${CONFIG_DIR}/lovelace_resources.yaml"
     else
-      echo "Warning: ${NAME}.js not found, skipping in Lovelace resources" >&2
+      echo "Warning: Resource file not found: ${RESOURCE}" >&2
     fi
   done
 }
@@ -51,19 +111,29 @@ process_components() {
 
   jq -c 'to_entries[]' "${COMPONENTS_FILE}" | while read -r component; do
     NAME=$(echo "$component" | jq -r '.key')
-    URL=$(echo "$component" | jq -r '.value')
-    
-    CACHED_URL=$(jq -r ".[\"$NAME\"]" "${LOCK_FILE}")
-    
-    if [ "$URL" != "$CACHED_URL" ]; then
-      echo "Downloading $NAME from $URL..."
-      if wget -O "${CONFIG_DIR}/www/${NAME}.js" "$URL"; then
-        jq ".[\"$NAME\"] = \"$URL\"" "${LOCK_FILE}" > "${LOCK_FILE}.tmp" && mv "${LOCK_FILE}.tmp" "${LOCK_FILE}"
+    URL=$(echo "$component" | jq -r '.value.url')
+    TYPE=$(echo "$component" | jq -r '.value.type // "null"')
+    VERSION=$(echo "$component" | jq -r '.value.version')
+
+    # Auto-detect type if not specified
+    if [ "$TYPE" = "null" ]; then
+      TYPE=$(detect_file_type "$URL") || continue
+    fi
+
+    CACHED_VERSION=$(jq -r ".[\"$NAME\"]" "${LOCK_FILE}")
+
+    if [ "$CACHED_VERSION" = "null" ] || [ "$CACHED_VERSION" != "$VERSION" ]; then
+      echo "Downloading $NAME (version $VERSION) from $URL..."
+      if handle_component_download "$NAME" "$URL" "$TYPE"; then
+        # Update lock file with just the version
+        jq --arg name "$NAME" --arg version "$VERSION" \
+           '.[$name] = $version' "${LOCK_FILE}" > "${LOCK_FILE}.tmp" && \
+        mv "${LOCK_FILE}.tmp" "${LOCK_FILE}"
       else
         echo "Failed to download $NAME" >&2
       fi
     else
-      echo "$NAME is up to date, skipping download..."
+      echo "$NAME version $VERSION is up to date, skipping download..."
     fi
   done
 }
