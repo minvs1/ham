@@ -175,24 +175,32 @@ EOF
 ]
 EOF
 
-    # Mock git clone to create the expected structure
+    # Mock git clone and checkout
     git() {
-        if [ "$1" = "clone" ]; then
-            # Get the target directory (last argument)
-            local target_dir="${@: -1}"
-            echo "Mock git clone creating repository in: $target_dir"
+        local cmd="$1"
+        case "$cmd" in
+            "clone")
+                # Get the target directory (last argument)
+                local target_dir="${@: -1}"
+                echo "Mock git clone creating repository in: $target_dir"
 
-            # Create the repo directory and content
-            mkdir -p "$target_dir/test"
-            echo "test" > "$target_dir/test/test.py"
+                # Create the repo directory and content
+                mkdir -p "$target_dir/test"
+                echo "test" > "$target_dir/test/test.py"
 
-            # Debug output
-            echo "Created directory structure:"
-            ls -R "$target_dir"
-
-            return 0
-        fi
-        return 1
+                # Debug output
+                echo "Created directory structure:"
+                ls -R "$target_dir"
+                return 0
+                ;;
+            "checkout")
+                echo "Mock git checkout of version: $2"
+                return 0
+                ;;
+            *)
+                return 1
+                ;;
+        esac
     }
     export -f git
 

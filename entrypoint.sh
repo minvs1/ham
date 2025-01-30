@@ -46,25 +46,44 @@ handle_git_download() {
   local REPO_PATH=$5
   local TARGET_DIR="${CONFIG_DIR}/${INSTALL_TYPE}"
   local TEMP_DIR=$(mktemp -d)
+  local REPO_DIR="${TEMP_DIR}/repo"
 
   echo "Cloning/updating git repository for $NAME..."
 
-  # Clone the repository
-  if ! git clone --depth 1 -b "$VERSION" "$URL" "$TEMP_DIR/repo"; then
+  # Clone the repository without checking out any branch first
+  if ! git clone "$URL" "$REPO_DIR"; then
     echo "Error: Failed to clone repository $URL" >&2
     rm -rf "$TEMP_DIR"
     return 1
   fi
 
-  local SOURCE_DIR="$TEMP_DIR/repo"
-  if [ -n "$REPO_PATH" ]; then
-    SOURCE_DIR="$TEMP_DIR/repo/$REPO_PATH"
-  fi
+  # Try different version formats
+  (cd "$REPO_DIR" && {
+    # Try exact version
+    if git checkout "$VERSION" 2>/dev/null; then
+      :
+    # Try with v prefix
+    elif git checkout "v${VERSION}" 2>/dev/null; then
+      :
+    # Try as tag
+    elif git checkout "tags/${VERSION}" 2>/dev/null; then
+      :
+    # Try as release tag
+    elif git checkout "refs/tags/${VERSION}" 2>/dev/null; then
+      :
+    else
+      echo "Error: Could not find version $VERSION" >&2
+      return 1
+    fi
+  }) || {
+    rm -rf "$TEMP_DIR"
+    return 1
+  }
 
-  # Debug output
-  echo "Checking source directory: $SOURCE_DIR"
-  echo "Repository contents:"
-  ls -R "$REPO_DIR" || echo "Failed to list repository contents"
+  local SOURCE_DIR="$REPO_DIR"
+  if [ -n "$REPO_PATH" ]; then
+    SOURCE_DIR="$REPO_DIR/$REPO_PATH"
+  fi
 
   if [ ! -d "$SOURCE_DIR" ]; then
     echo "Error: Source directory '$SOURCE_DIR' not found in repository" >&2
