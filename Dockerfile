@@ -1,6 +1,6 @@
 FROM --platform=$TARGETOS/$TARGETARCH alpine:3.14
 
-RUN apk add --no-cache wget bash jq
+RUN apk add --no-cache wget bash jq git
 
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
