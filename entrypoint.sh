@@ -3,10 +3,11 @@ set -e
 
 # Environment variables with defaults
 export CONFIG_DIR=${CONFIG_DIR:-"/config"}
-export COMPONENTS_FILE=${COMPONENTS_FILE:-"${CONFIG_DIR}/www/components.json"}
-export LOCK_FILE=${LOCK_FILE:-"${CONFIG_DIR}/www/components.json.lock"}
+export COMPONENTS_FILE=${COMPONENTS_FILE:-"${CONFIG_DIR}/ham/components.json"}
+export LOCK_FILE=${LOCK_FILE:-"${CONFIG_DIR}/ham/components.json.lock"}
 
 # Ensure necessary directories exist
+mkdir -p "${CONFIG_DIR}/ham"
 mkdir -p "${CONFIG_DIR}/www"
 mkdir -p "${CONFIG_DIR}/custom_components"
 

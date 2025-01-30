@@ -87,7 +87,7 @@ initContainers:
       - name: config
         mountPath: /config
       - name: custom-components-config
-        mountPath: /config/www/components.json
+        mountPath: /config/ham/components.json
         subPath: components.json
 ```
 
@@ -113,7 +113,7 @@ spec:
             - name: config
               mountPath: /config
             - name: custom-components-config
-              mountPath: /config/www/components.json
+              mountPath: /config/ham/components.json
               subPath: components.json
       containers:
         - name: home-assistant
