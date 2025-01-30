@@ -1,6 +1,6 @@
-# HACS Plugins
+# Ham
 
-HACS Plugins is a simple container that can be used as an init container to automatically download, install and update HACS plugins.
+HAM (HA Addon Manager) is a simple container that can be used as an init container to automatically download, install and update Home Assistant lovelace resources and custom components.
 
 ## Getting Started
 
@@ -15,43 +15,59 @@ metadata:
   name: custom-components-config
 data:
   components.json: |
-    {
-      "vacuum-card": {
+    [
+      {
+        "name": "vacuum-card",
         "url": "https://github.com/denysdovhan/vacuum-card/releases/download/v2.10.1/vacuum-card.js",
         "version": "2.10.1",
-        "lovelace_resource": "vacuum-card.js"
+        "type": "file",
+        "install_type": "www"
       },
-      "browser_mod": {
-        "url": "https://github.com/thomasloven/hass-browser_mod/releases/download/2.3.0/browser_mod.js",
+      {
+        "name": "browser-mod",
+        "url": "https://github.com/thomasloven/hass-browser_mod.git",
         "version": "2.3.0",
-        "lovelace_resource": null
+        "type": "git",
+        "install_type": "custom_components",
+        "repo_path": "browser_mod"
       },
-      "apex-cards": {
+      {
+        "name": "apex-cards",
         "url": "https://github.com/RomRider/apexcharts-card/releases/download/v2.0.4/apexcharts-card.zip",
         "version": "2.0.4",
-        "lovelace_resource": "apexcharts-card/card.js"
+        "type": "zip",
+        "install_type": "www",
+        "lovelace_resource": "apex-cards/card.js"
       }
-    }
+    ]
 ```
 
 ### Components Configuration
 
 Each component in components.json can have the following properties:
 
+- `name` (required): Unique identifier for the component
 - `url` (required): URL to download the component from
 - `version` (required): Version of the component for update tracking
-- `type` (optional): Type of the file ("js" or "zip"). If not specified, will be auto-detected from the URL
-- `lovelace_resource` (optional): Path to the JS file that should be added to lovelace_resources.yaml. Set to null for components that don't need to be added to Lovelace resources
+- `type` (optional): Type of the file ("file", "zip", or "git"). If not specified, will be auto-detected from the URL
+- `install_type` (optional): Where to install the component ("www" or "custom_components"). Defaults to "www"
+- `lovelace_resource` (optional): Path to the JS file that should be added to lovelace_resources.yaml. Required for non-file type components in www directory
+- `repo_path` (optional): For git repositories, specifies the subdirectory containing the component
 
-#### File Types and Handling
+#### Installation Types and Handling
 
-- **JavaScript Files (.js)**
-  - Downloaded directly to `/config/www/[name].js`
-  - Set `lovelace_resource` to the desired JS filename
+- **Single Files (JS, CSS)**
+  - Installed to `/config/www/`
+  - For www installations, filename is automatically used as lovelace_resource if not specified
 
-- **ZIP Files (.zip)**
-  - Automatically extracted to `/config/www/[zip-name]/`
-  - Set `lovelace_resource` to point to the main JS file within the extracted directory
+- **ZIP Files**
+  - Extracted to `/config/www/[name]/` or `/config/custom_components/[name]/`
+  - For www installations, must specify lovelace_resource pointing to the main JS file
+
+- **Git Repositories**
+  - Cloned and installed to `/config/www/[name]/` or `/config/custom_components/[name]/`
+  - Use repo_path to specify which subdirectory contains the component
+  - For www installations, must specify lovelace_resource
 
 ### Update your Home Assistant configuration
 
@@ -64,15 +80,15 @@ lovelace: !include lovelace_resources.yaml
 ### Add Init Container
 
 ```yaml
-      initContainers:
-        - name: install-hacs-plugins
-          image: "ghcr.io/minvs1/hacs-plugins:latest"
-          volumeMounts:
-            - name: config
-              mountPath: /config
-            - name: custom-components-config
-              mountPath: /config/www/components.json
-              subPath: components.json
+initContainers:
+  - name: install-ham
+    image: "ghcr.io/minvs1/ham:latest"
+    volumeMounts:
+      - name: config
+        mountPath: /config
+      - name: custom-components-config
+        mountPath: /config/www/components.json
+        subPath: components.json
 ```
 
 ## Example Deployment
@@ -123,6 +139,6 @@ The container maintains a lock file (`components.json.lock`) to track installed 
 ## Tests
 
 ```bash
-docker build -f Dockerfile.test -t hacs-plugins-tests .
-docker run --rm hacs-plugins-tests
+docker build -f Dockerfile.test -t ham-tests .
+docker run --rm ham-tests
 ```

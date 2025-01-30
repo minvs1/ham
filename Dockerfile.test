@@ -5,6 +5,6 @@ RUN apk add --no-cache bash wget jq bats
 WORKDIR /app
 
 COPY entrypoint.sh /app/
-COPY test_hacs_plugins.bats /app/
+COPY test_ham.bats /app/
 
-CMD ["bats", "test_hacs_plugins.bats"]
+CMD ["bats", "test_ham.bats"]

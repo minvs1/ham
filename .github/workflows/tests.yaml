@@ -16,8 +16,8 @@ jobs:
 
       - name: Run tests
         run: |
-          docker build -f Dockerfile.test -t hacs-plugins-tests .
-          docker run --rm hacs-plugins-tests
+          docker build -f Dockerfile.test -t ham-tests .
+          docker run --rm ham-tests
 
   build:
     runs-on: ubuntu-latest
