@@ -25,19 +25,19 @@ data:
       },
       {
         "name": "browser-mod",
-        "url": "https://github.com/thomasloven/hass-browser_mod.git",
-        "version": "2.3.0",
+        "url": "https://github.com/thomasloven/hass-browser_mod",
+        "version": "2.3.3",
         "type": "git",
         "install_type": "custom_components",
-        "repo_path": "browser_mod"
+        "remote_resource_path": "custom_components/browser_mod"
       },
       {
-        "name": "apex-cards",
-        "url": "https://github.com/RomRider/apexcharts-card/releases/download/v2.0.4/apexcharts-card.zip",
-        "version": "2.0.4",
-        "type": "zip",
+        "name": "lovelace-auto-entities",
+        "url": "https://github.com/thomasloven/lovelace-auto-entities",
+        "version": "1.13.0",
+        "type": "git",
         "install_type": "www",
-        "lovelace_resource": "apex-cards/card.js"
+        "remote_resource_path": "auto-entities.js"
       }
     ]
 ```
@@ -51,8 +51,7 @@ Each component in components.json can have the following properties:
 - `version` (required): Version of the component for update tracking
 - `type` (optional): Type of the file ("file", "zip", or "git"). If not specified, will be auto-detected from the URL
 - `install_type` (optional): Where to install the component ("www" or "custom_components"). Defaults to "www"
-- `lovelace_resource` (optional): Path to the JS file that should be added to lovelace_resources.yaml. Required for non-file type components in www directory
-- `repo_path` (optional): For git repositories, specifies the subdirectory containing the component
+- `remote_resource_path` (optional): Path to the resource on remote location. The file that should be added to lovelace_resources.yaml or dir created in `/config/custom_components`. Required for non-file type components in www directory.
 
 #### Installation Types and Handling
 
