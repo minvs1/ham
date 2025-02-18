@@ -25,19 +25,11 @@ data:
       },
       {
         "name": "browser-mod",
-        "url": "https://github.com/thomasloven/hass-browser_mod.git",
-        "version": "2.3.0",
+        "url": "https://github.com/thomasloven/hass-browser_mod",
+        "version": "2.3.3",
         "type": "git",
         "install_type": "custom_components",
-        "remote_resource_path": "browser_mod"
-      },
-      {
-        "name": "apex-cards",
-        "url": "https://github.com/RomRider/apexcharts-card/releases/download/v2.0.4/apexcharts-card.zip",
-        "version": "2.0.4",
-        "type": "zip",
-        "install_type": "www",
-        "remote_resource_path": "apex-cards/card.js"
+        "remote_resource_path": "custom_components/browser_mod"
       },
       {
         "name": "lovelace-auto-entities",
