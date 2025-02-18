@@ -1,10 +1,10 @@
 FROM alpine:3.14
 
-RUN apk add --no-cache bash wget jq bats
+RUN apk add --no-cache bash git jq wget
 
 WORKDIR /app
 
-COPY entrypoint.sh /app/
-COPY test_ham.bats /app/
+COPY ham.sh /app/
+COPY test_ham.sh /app/
 
-CMD ["bats", "test_ham.bats"]
+CMD ["sh", "/app/test_ham.sh"]

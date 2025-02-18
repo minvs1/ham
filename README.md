@@ -38,6 +38,14 @@ data:
         "type": "zip",
         "install_type": "www",
         "lovelace_resource": "apex-cards/card.js"
+      },
+      {
+        "name": "lovelace-auto-entities",
+        "url": "https://github.com/thomasloven/lovelace-auto-entities",
+        "version": "1.13.0",
+        "type": "git",
+        "install_type": "www",
+        "lovelace_resource": "auto-entities.js"
       }
     ]
 ```

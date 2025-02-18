@@ -1,8 +1,8 @@
 FROM --platform=$TARGETOS/$TARGETARCH alpine:3.14
 
-RUN apk add --no-cache wget bash jq git
+RUN apk add --no-cache bash git jq wget
 
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
+COPY entrypoint.sh /usr/local/bin/ham.sh
+RUN chmod +x /usr/local/bin/ham.sh
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+ENTRYPOINT ["/usr/local/bin/ham.sh"]
