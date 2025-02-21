@@ -73,7 +73,9 @@ Each component in components.json can have the following properties:
 Add the following to your Home Assistant configuration:
 
 ```yaml
-lovelace: !include lovelace_resources.yaml
+lovelace:
+  mode: yaml
+  resources: !include lovelace_resources.yaml
 ```
 
 ### Add Init Container

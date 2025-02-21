@@ -453,9 +453,6 @@ handle_git_download() {
 
 # Generate lovelace_resources.yaml
 generate_lovelace_resources() {
-  echo "mode: yaml" > "${CONFIG_DIR}/lovelace_resources.yaml"
-  echo "resources:" >> "${CONFIG_DIR}/lovelace_resources.yaml"
-
   jq -c '.[] | select(.install_type == "www")' "${COMPONENTS_FILE}" | while read -r component; do
     local NAME=$(echo "$component" | jq -r '.name')
     local TYPE=$(echo "$component" | jq -r '.type // "null"')
@@ -471,8 +468,8 @@ generate_lovelace_resources() {
     if [ -n "$RESOURCE" ]; then
       local RESOURCE_PATH="${CONFIG_DIR}/www/${RESOURCE}"
       if [ -f "$RESOURCE_PATH" ]; then
-        echo "  - url: /local/${RESOURCE}?v=${VERSION}" >> "${CONFIG_DIR}/lovelace_resources.yaml"
-        echo "    type: module" >> "${CONFIG_DIR}/lovelace_resources.yaml"
+        echo "- url: /local/${RESOURCE}?v=${VERSION}" >> "${CONFIG_DIR}/lovelace_resources.yaml"
+        echo "  type: module" >> "${CONFIG_DIR}/lovelace_resources.yaml"
       fi
     fi
   done
