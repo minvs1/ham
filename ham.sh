@@ -453,6 +453,8 @@ handle_git_download() {
 
 # Generate lovelace_resources.yaml
 generate_lovelace_resources() {
+  echo "" > "${CONFIG_DIR}/lovelace_resources.yaml"
+   
   jq -c '.[] | select(.install_type == "www")' "${COMPONENTS_FILE}" | while read -r component; do
     local NAME=$(echo "$component" | jq -r '.name')
     local TYPE=$(echo "$component" | jq -r '.type // "null"')

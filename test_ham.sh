@@ -8,6 +8,11 @@ readonly COMPONENTS_FILE="${CONFIG_DIR}/ham/components.json"
 readonly LOCK_FILE="${CONFIG_DIR}/ham/components.json.lock"
 readonly LOVELACE_FILE="${CONFIG_DIR}/lovelace_resources.yaml"
 
+readonly EXPECTED_LOVELACE_YAML='- url: /local/vacuum-card.js?v=2.10.1
+  type: module
+- url: /local/auto-entities.js?v=1.13.0
+  type: module'
+
 # Test components configuration
 readonly TEST_COMPONENTS='[
   {
@@ -94,6 +99,43 @@ assert_file_contains() {
     assert "${message}" "grep -q '${pattern}' '${file}'"
 }
 
+assert_yaml_matches() {
+    local actual_file=$1
+    local expected_content=$2
+    local message=${3:-"YAML content matches expected structure"}
+    
+    # Create temporary files for comparison
+    local tmp_expected
+    local tmp_actual
+    tmp_expected=$(mktemp)
+    tmp_actual=$(mktemp)
+    
+    # Normalize and save expected content
+    echo "${expected_content}" | sed '/^[[:space:]]*$/d' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > "${tmp_expected}"
+    
+    # Normalize and save actual content
+    sed '/^[[:space:]]*$/d' "${actual_file}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' > "${tmp_actual}"
+    
+    # Compare files
+    if diff "${tmp_expected}" "${tmp_actual}" > /dev/null; then
+        echo "✅ ${message}"
+    else
+        echo "❌ ${message}"
+        echo "Expected YAML:"
+        cat "${tmp_expected}"
+        echo "Actual YAML:"
+        cat "${tmp_actual}"
+        echo "Diff:"
+        diff "${tmp_expected}" "${tmp_actual}" || true
+        rm -f "${tmp_expected}" "${tmp_actual}"
+        cleanup
+        exit 1
+    fi
+    
+    # Cleanup temporary files
+    rm -f "${tmp_expected}" "${tmp_actual}"
+}
+
 # Main test function
 run_tests() {
     echo "Running HAM tests..."
@@ -139,6 +181,10 @@ run_tests() {
     echo "Verifying lock file..."
     assert_file_exists "${LOCK_FILE}" \
         "Lock file is created"
+    
+    # Verify exact YAML content
+    assert_yaml_matches "${LOVELACE_FILE}" "${EXPECTED_LOVELACE_YAML}" \
+        "lovelace_resources.yaml has correct structure and content"
     
     # Verify lock file contents using jq
     for component in "vacuum-card" "browser-mod" "lovelace-auto-entities"; do
