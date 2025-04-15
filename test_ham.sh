@@ -37,6 +37,14 @@ readonly TEST_COMPONENTS='[
     "type": "git",
     "install_type": "www",
     "remote_resource_path": "auto-entities.js"
+  },
+  {
+    "name": "luxtronik",
+    "url": "https://github.com/BenPru/luxtronik",
+    "version": "2024.9.30",
+    "type": "git",
+    "install_type": "custom_components",
+    "remote_resource_path": "custom_components/luxtronik"
   }
 ]'
 
@@ -163,6 +171,14 @@ run_tests() {
     # Check browser-mod
     assert_dir_exists "${CONFIG_DIR}/custom_components/browser-mod" \
         "browser_mod component is installed"
+    
+    # Check luxtronik component structure
+    assert_dir_exists "${CONFIG_DIR}/custom_components/luxtronik" \
+        "luxtronik component is installed"
+    assert "luxtronik has no nested custom_components directory" \
+        "[ ! -d '${CONFIG_DIR}/custom_components/luxtronik/custom_components' ]"
+    assert "luxtronik has expected files" \
+        "[ -f '${CONFIG_DIR}/custom_components/luxtronik/__init__.py' ]"
     
     # Check auto-entities
     assert_file_exists "${CONFIG_DIR}/www/auto-entities.js" \

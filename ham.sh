@@ -183,6 +183,7 @@ handle_git_download() {
     local INSTALL_TYPE=$4
     local REPO_PATH=$5
     local TARGET_DIR="${CONFIG_DIR}/${INSTALL_TYPE}"
+    local REMOTE_RESOURCE_PATH=$(echo "$component" | jq -r '.remote_resource_path // ""')
     local TEMP_DIR
     local REPO_DIR
     
@@ -192,6 +193,7 @@ handle_git_download() {
     log_debug "  Version: $VERSION"
     log_debug "  Install Type: $INSTALL_TYPE"
     log_debug "  Repo Path: ${REPO_PATH:-<root>}"
+    log_debug "  Remote Resource Path: ${REMOTE_RESOURCE_PATH:-<none>}"
     log_debug "  Target Directory: $TARGET_DIR"
 
     # Create temporary directory
@@ -212,7 +214,6 @@ handle_git_download() {
         else
             log_error "Failed to clone repository: $URL"
         fi
-
         return 1
     fi
 
@@ -264,33 +265,103 @@ handle_git_download() {
         return 1
     fi
 
-    local FINAL_TARGET="${TARGET_DIR}/${NAME}"
-    log_debug "Preparing target directory: $FINAL_TARGET"
-
-    # Clean up existing directory
-    if [ -d "$FINAL_TARGET" ]; then
-        log_debug "Removing existing directory: $FINAL_TARGET"
-        rm -rf "$FINAL_TARGET" || {
-            log_error "Failed to remove existing directory: $FINAL_TARGET"
-            return 1
-        }
-    fi
-
-    # Create target directory and copy files
-    log_debug "Creating target directory and copying files"
-    if ! mkdir -p "$FINAL_TARGET"; then
-        log_error "Failed to create target directory: $FINAL_TARGET"
-        return 1
-    fi
-
-    if ! cp -r "$SOURCE_DIR"/* "$FINAL_TARGET" 2> >(error_output=$(cat)); then
-        if [ -n "$error_output" ]; then
-            log_error "Copy failed: $error_output"
+    # Determine if we're handling a single file based on remote_resource_path
+    if [ -n "$REMOTE_RESOURCE_PATH" ]; then
+        if [[ "$REMOTE_RESOURCE_PATH" =~ \.(js|css|json)$ ]]; then
+            log_debug "Remote resource path indicates a single file: $REMOTE_RESOURCE_PATH"
+            
+            # Extract filename from remote_resource_path
+            local FILENAME=$(basename "$REMOTE_RESOURCE_PATH")
+            local SOURCE_FILE
+            
+            # Search for the file in the repository
+            SOURCE_FILE=$(find "$SOURCE_DIR" -type f -name "$FILENAME" | head -n 1)
+            
+            if [ -z "$SOURCE_FILE" ]; then
+                log_error "Could not find source file $FILENAME in repository"
+                return 1
+            fi
+            
+            local FINAL_TARGET="${TARGET_DIR}/${REMOTE_RESOURCE_PATH}"
+            
+            # Create parent directory if it doesn't exist
+            mkdir -p "$(dirname "$FINAL_TARGET")"
+            
+            # Copy single file
+            log_debug "Copying single file to: $FINAL_TARGET"
+            if ! cp "$SOURCE_FILE" "$FINAL_TARGET" 2> >(error_output=$(cat)); then
+                if [ -n "$error_output" ]; then
+                    log_error "Copy failed: $error_output"
+                else
+                    log_error "Failed to copy file to target path"
+                fi
+                return 1
+            fi
         else
-            log_error "Failed to copy files to target directory"
+            # Handle directory case
+            log_debug "Remote resource path indicates a directory: $REMOTE_RESOURCE_PATH"
+            
+            # Find the source directory
+            local SOURCE_SUBDIR=$(find "$SOURCE_DIR" -type d -path "*/${REMOTE_RESOURCE_PATH}" | head -n 1)
+            if [ -z "$SOURCE_SUBDIR" ]; then
+                log_error "Could not find source directory $REMOTE_RESOURCE_PATH in repository"
+                return 1
+            fi
+            
+            local FINAL_TARGET="${TARGET_DIR}/${NAME}"
+            
+            # Clean up existing directory
+            if [ -d "$FINAL_TARGET" ]; then
+                log_debug "Removing existing directory: $FINAL_TARGET"
+                rm -rf "$FINAL_TARGET" || {
+                    log_error "Failed to remove existing directory: $FINAL_TARGET"
+                    return 1
+                }
+            fi
+            
+            # Create target directory and copy files
+            log_debug "Creating target directory and copying files from $SOURCE_SUBDIR to $FINAL_TARGET"
+            if ! mkdir -p "$FINAL_TARGET"; then
+                log_error "Failed to create target directory: $FINAL_TARGET"
+                return 1
+            fi
+            
+            if ! cp -r "$SOURCE_SUBDIR"/* "$FINAL_TARGET" 2> >(error_output=$(cat)); then
+                if [ -n "$error_output" ]; then
+                    log_error "Copy failed: $error_output"
+                else
+                    log_error "Failed to copy files to target directory"
+                fi
+                return 1
+            fi
+        fi
+    else
+        # Handle as directory (original behavior)
+        local FINAL_TARGET="${TARGET_DIR}/${NAME}"
+        
+        if [ -d "$FINAL_TARGET" ]; then
+            log_debug "Removing existing directory: $FINAL_TARGET"
+            rm -rf "$FINAL_TARGET" || {
+                log_error "Failed to remove existing directory: $FINAL_TARGET"
+                return 1
+            }
         fi
 
-        return 1
+        # Create target directory and copy files
+        log_debug "Creating target directory and copying files"
+        if ! mkdir -p "$FINAL_TARGET"; then
+            log_error "Failed to create target directory: $FINAL_TARGET"
+            return 1
+        fi
+
+        if ! cp -r "$SOURCE_DIR"/* "$FINAL_TARGET" 2> >(error_output=$(cat)); then
+            if [ -n "$error_output" ]; then
+                log_error "Copy failed: $error_output"
+            else
+                log_error "Failed to copy files to target directory"
+            fi
+            return 1
+        fi
     fi
 
     log_info "Successfully installed $NAME to $FINAL_TARGET"
@@ -388,35 +459,74 @@ handle_git_download() {
     fi
 
     # Determine if we're handling a single file based on remote_resource_path
-    if [ -n "$REMOTE_RESOURCE_PATH" ] && [[ "$REMOTE_RESOURCE_PATH" =~ \.(js|css|json)$ ]]; then
-        log_debug "Remote resource path indicates a single file: $REMOTE_RESOURCE_PATH"
-        
-        # Extract filename from remote_resource_path
-        local FILENAME=$(basename "$REMOTE_RESOURCE_PATH")
-        local SOURCE_FILE
-        
-        # Search for the file in the repository
-        SOURCE_FILE=$(find "$SOURCE_DIR" -type f -name "$FILENAME" | head -n 1)
-        
-        if [ -z "$SOURCE_FILE" ]; then
-            log_error "Could not find source file $FILENAME in repository"
-            return 1
-        fi
-        
-        local FINAL_TARGET="${TARGET_DIR}/${REMOTE_RESOURCE_PATH}"
-        
-        # Create parent directory if it doesn't exist
-        mkdir -p "$(dirname "$FINAL_TARGET")"
-        
-        # Copy single file
-        log_debug "Copying single file to: $FINAL_TARGET"
-        if ! cp "$SOURCE_FILE" "$FINAL_TARGET" 2> >(error_output=$(cat)); then
-            if [ -n "$error_output" ]; then
-                log_error "Copy failed: $error_output"
-            else
-                log_error "Failed to copy file to target path"
+    if [ -n "$REMOTE_RESOURCE_PATH" ]; then
+        if [[ "$REMOTE_RESOURCE_PATH" =~ \.(js|css|json)$ ]]; then
+            log_debug "Remote resource path indicates a single file: $REMOTE_RESOURCE_PATH"
+            
+            # Extract filename from remote_resource_path
+            local FILENAME=$(basename "$REMOTE_RESOURCE_PATH")
+            local SOURCE_FILE
+            
+            # Search for the file in the repository
+            SOURCE_FILE=$(find "$SOURCE_DIR" -type f -name "$FILENAME" | head -n 1)
+            
+            if [ -z "$SOURCE_FILE" ]; then
+                log_error "Could not find source file $FILENAME in repository"
+                return 1
             fi
-            return 1
+            
+            local FINAL_TARGET="${TARGET_DIR}/${REMOTE_RESOURCE_PATH}"
+            
+            # Create parent directory if it doesn't exist
+            mkdir -p "$(dirname "$FINAL_TARGET")"
+            
+            # Copy single file
+            log_debug "Copying single file to: $FINAL_TARGET"
+            if ! cp "$SOURCE_FILE" "$FINAL_TARGET" 2> >(error_output=$(cat)); then
+                if [ -n "$error_output" ]; then
+                    log_error "Copy failed: $error_output"
+                else
+                    log_error "Failed to copy file to target path"
+                fi
+                return 1
+            fi
+        else
+            # Handle directory case
+            log_debug "Remote resource path indicates a directory: $REMOTE_RESOURCE_PATH"
+            
+            # Find the source directory
+            local SOURCE_SUBDIR=$(find "$SOURCE_DIR" -type d -path "*/${REMOTE_RESOURCE_PATH}" | head -n 1)
+            if [ -z "$SOURCE_SUBDIR" ]; then
+                log_error "Could not find source directory $REMOTE_RESOURCE_PATH in repository"
+                return 1
+            fi
+            
+            local FINAL_TARGET="${TARGET_DIR}/${NAME}"
+            
+            # Clean up existing directory
+            if [ -d "$FINAL_TARGET" ]; then
+                log_debug "Removing existing directory: $FINAL_TARGET"
+                rm -rf "$FINAL_TARGET" || {
+                    log_error "Failed to remove existing directory: $FINAL_TARGET"
+                    return 1
+                }
+            fi
+            
+            # Create target directory and copy files
+            log_debug "Creating target directory and copying files from $SOURCE_SUBDIR to $FINAL_TARGET"
+            if ! mkdir -p "$FINAL_TARGET"; then
+                log_error "Failed to create target directory: $FINAL_TARGET"
+                return 1
+            fi
+            
+            if ! cp -r "$SOURCE_SUBDIR"/* "$FINAL_TARGET" 2> >(error_output=$(cat)); then
+                if [ -n "$error_output" ]; then
+                    log_error "Copy failed: $error_output"
+                else
+                    log_error "Failed to copy files to target directory"
+                fi
+                return 1
+            fi
         fi
     else
         # Handle as directory (original behavior)
